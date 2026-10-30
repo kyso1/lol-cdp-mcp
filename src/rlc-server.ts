@@ -51,9 +51,9 @@ async function rlc<T = any>(expr: string): Promise<T> {
 }
 
 /** Runs a command line through the shell in the ReimaginedLC repo; arguments are fixed strings from this file. */
-function run(line: string, timeoutMs: number): Promise<{ code: number | null; out: string }> {
+function run(line: string, timeoutMs: number, cwd?: string): Promise<{ code: number | null; out: string }> {
   return new Promise((resolve) => {
-    const p = spawn(line, { cwd: assertRepo(), shell: true, env: { ...process.env, FORCE_COLOR: '0', CI: '1' } });
+    const p = spawn(line, { cwd: cwd ?? assertRepo(), shell: true, env: { ...process.env, FORCE_COLOR: '0', CI: '1' } });
     let out = '';
     const add = (d: Buffer) => {
       out += d.toString();
@@ -251,11 +251,11 @@ tool(
     await guardPhase('restore the release and reload');
     const dir = mkdtempSync(join(tmpdir(), 'rlc-release-'));
     try {
-      const d = await run(`gh release download ${a.tag ?? ''} -R ${REPO} --pattern "ReimaginedLC-*.zip" -D "${dir}"`, 120_000);
+      const d = await run(`gh release download ${a.tag ?? ''} -R ${REPO} --pattern "ReimaginedLC-*.zip" -D "${dir}"`, 120_000, dir);
       if (d.code !== 0) throw new Error(`gh release download failed:\n${tail(d.out)}`);
       const zip = readdirSync(dir).find((f) => f.endsWith('.zip'));
       if (!zip) throw new Error('release has no ReimaginedLC-*.zip');
-      const x = await run(`powershell -NoProfile -Command "Expand-Archive -LiteralPath '${join(dir, zip)}' -DestinationPath '${join(dir, 'x')}' -Force"`, 120_000);
+      const x = await run(`powershell -NoProfile -Command "Expand-Archive -LiteralPath '${join(dir, zip)}' -DestinationPath '${join(dir, 'x')}' -Force"`, 120_000, dir);
       if (x.code !== 0) throw new Error(`extract failed:\n${tail(x.out)}`);
       cpSync(join(dir, 'x', 'ReimaginedLC'), join(PENGU_DIR, 'plugins', 'ReimaginedLC'), { recursive: true });
       return `Installed ${zip}.\n${await reloadAndWait()}`;
