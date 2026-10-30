@@ -82,14 +82,16 @@ async function closeOverlays(): Promise<void> {
 /** Side panels (honor, notifications) cover the screen without looking like a modal. */
 const CLOSERS = ['lol-uikit-close-button', '[class*="close-button"]', '[class*="close-btn"]', 'button[class*="close"]', '[class*="dismiss"]'];
 
-/** True when the top bar is covered somewhere: something (panel, backdrop) sits over the screen. */
+/** True when most of the top bar is covered: a panel or backdrop sits over the screen. */
 async function blocked(): Promise<boolean> {
   const n = await client.page<number>('count', { selector: 'lol-uikit-navigation-item.main-navigation-menu-item' }).catch(() => 0);
+  let covered = 0;
   for (let i = 0; i < n; i++) {
     const p = await client.page<{ onTop: boolean }>('point', { selector: 'lol-uikit-navigation-item.main-navigation-menu-item', nth: i }).catch(() => null);
-    if (p && !p.onTop) return true;
+    if (p && !p.onTop) covered++;
   }
-  return false;
+  // A badge or glow can sit on one icon; a backdrop covers most of them.
+  return covered > n / 2;
 }
 
 async function unblock(): Promise<void> {
