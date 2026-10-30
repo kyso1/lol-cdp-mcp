@@ -64,6 +64,8 @@ export function inpage() {
     const ti = el.getAttribute('tabindex');
     if (ti !== null && Number(ti) >= 0) return true;
     if ((el as HTMLElement).onclick) return true;
+    // Ember {{action}} and Riot's Datadog action names mark click handlers that leave no other trace.
+    for (const a of el.getAttributeNames()) if (a.startsWith('data-ember-action') || a === 'data-dd-action-name') return true;
     if (getComputedStyle(el).cursor !== 'pointer') return false;
     // Only the outermost element of a pointer region counts, so a button's icon and label are not listed separately.
     const p = parentDeep(el);
@@ -76,7 +78,7 @@ export function inpage() {
   };
 
   function label(el: Element): string {
-    const a = ['aria-label', 'title', 'alt', 'placeholder', 'data-tooltip', 'tooltip-text']
+    const a = ['aria-label', 'title', 'alt', 'placeholder', 'data-tooltip', 'tooltip-text', 'data-dd-action-name', 'action']
       .map((k) => el.getAttribute(k))
       .find((v) => v && v.trim());
     const text = squash((el as HTMLElement).innerText ?? el.textContent);
@@ -241,7 +243,8 @@ export function inpage() {
       for (let i = 0; p && i < 6; i++, p = parentDeep(p)) {
         if (!kept.has(p)) continue;
         const q = p.getBoundingClientRect();
-        return (r.width * r.height) / Math.max(1, q.width * q.height) > 0.5;
+        // Inside a kept control: skip when it fills most of it or has no name of its own (icon, label span).
+        return (r.width * r.height) / Math.max(1, q.width * q.height) > 0.5 || label(el).startsWith('(') || !label(el);
       }
       return false;
     };
@@ -255,7 +258,10 @@ export function inpage() {
       if (!interactive(el) || !visible(el)) continue;
       if (nested(el)) continue;
       kept.add(el);
-      const sig = signature(el);
+      // Tabs are siblings with the same shape but each leads somewhere else: never collapse them.
+      const tab = /navigation-item|radio-input-option|^tab$/i.test(el.tagName) || el.getAttribute('role') === 'tab' ||
+        !!el.querySelector?.('lol-uikit-navigation-item');
+      const sig = tab ? `${signature(el)}#${label(el)}` : signature(el);
       const n = (groups.get(sig) ?? 0) + 1;
       groups.set(sig, n);
       if (collapse > 0 && n > collapse) {
@@ -298,7 +304,7 @@ export function inpage() {
 
   /** Visible modals, flyouts, tooltips, menus: whatever floats above the screen. */
   function overlays() {
-    const out: Array<{ tag: string; selector: string; text: string }> = [];
+    const out: Array<{ tag: string; selector: string; text: string; area: number }> = [];
     const seen = new Set<Element>();
     for (const e of walk(document)) {
       const tag = e.tagName.toLowerCase();
@@ -312,7 +318,8 @@ export function inpage() {
       const text = squash((e as HTMLElement).innerText ?? e.textContent, 400);
       if (!text && !/modal|dialog/i.test(tag + cls)) continue;
       seen.add(e);
-      out.push({ tag, selector: selectorFor(e), text });
+      const r = e.getBoundingClientRect();
+      out.push({ tag, selector: selectorFor(e), text, area: Math.round(r.width * r.height) });
     }
     return out;
   }
@@ -339,6 +346,19 @@ export function inpage() {
     if (!item) throw new Error(`unknown nav id ${id}; known: ${nav().map((n: any) => n.id).join(', ')}`);
     api.setActive(item, true);
     return true;
+  }
+
+  /** Identity of what is on screen: active main tab plus the active sub-tabs (Collection > Skins). */
+  function screenKey() {
+    const main = nav().find((n: any) => n.active)?.id ?? null;
+    const sub: string[] = [];
+    for (const e of walk(document)) {
+      if (e.tagName !== 'LOL-UIKIT-NAVIGATION-ITEM' || e.classList.contains('main-navigation-menu-item')) continue;
+      if (!(e.hasAttribute('active') || e.getAttribute('aria-selected') === 'true') || !visible(e)) continue;
+      const l = label(e);
+      if (l && !l.startsWith('(')) sub.push(l);
+    }
+    return { main, sub };
   }
 
   function text(t: Target) {
@@ -401,7 +421,7 @@ export function inpage() {
     return { present: true, shown: getComputedStyle(root).display !== 'none' && visible(root) };
   }
 
-  return { snapshot, point, overlays, nav, navigate, text, html, count, focus, clear, lcu, layer, describe, find, selectorFor, queryAllDeep, visible };
+  return { snapshot, point, overlays, nav, navigate, screenKey, text, html, count, focus, clear, lcu, layer, describe, find, selectorFor, queryAllDeep, visible };
 }
 
 const SOURCE = inpage.toString();

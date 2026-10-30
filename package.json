@@ -9,6 +9,7 @@
   },
   "scripts": {
     "start": "node src/server.ts",
+    "start:rlc": "node src/rlc-server.ts",
     "crawl": "node src/crawl.ts",
     "test": "node --test src/*.test.ts",
     "typecheck": "tsc --noEmit"

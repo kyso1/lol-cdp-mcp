@@ -16,8 +16,11 @@ export interface Control {
   label: string;
   tag: string;
   selector: string;
-  /** What clicking did: went to another screen, opened an overlay, only fired requests, nothing, or was not clicked. */
-  effect: 'screen' | 'overlay' | 'requests' | 'none' | 'skipped' | 'error';
+  /**
+   * What clicking did: went to another screen, opened an overlay, revealed controls in place (dropdown options), only
+   * fired requests, nothing, or was not clicked.
+   */
+  effect: 'screen' | 'overlay' | 'reveals' | 'requests' | 'none' | 'skipped' | 'error';
   hover?: string;
   /** Screen id reached, or overlay text. */
   opens?: string;
