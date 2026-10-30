@@ -67,7 +67,7 @@ npm run crawl -- [--only=rcp-fe-lol-loot,shell] [--max-screens=150] [--max-contr
 
 Starts only in None or Lobby and stops if the phase changes. It turns the ReimaginedLC layer off and back on, then
 for each screen hovers and clicks every control (one sample of each repeated item), follows tabs, overlays and
-dropdowns, and writes `map/<patch>/map.json` (screenshots go to `map/<patch>/shots/`, not committed).
+dropdowns, and writes `map/<patch>/map.json` (and screenshots in `map/<patch>/shots/`). The map holds personal data (friend names, chat, account ids), so `map/` is gitignored.
 
 While crawling, every write request outside a short allowlist (create/leave lobby, custom champ select, loot refresh)
 is recorded and failed. Purchase, craft, report, invite and settings buttons are therefore pressed, but nothing
