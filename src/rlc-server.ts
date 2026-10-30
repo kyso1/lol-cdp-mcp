@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 /**
  * MCP server for ReimaginedLC (the user's own client layer). Reads and drives the shell through `window.__rlc`, which
  * only the dev build (`vite build --mode client`) installs, and runs the dev cycle: check, build into Pengu, reload,
@@ -7,14 +8,15 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { spawn } from 'node:child_process';
-import { cpSync, mkdtempSync, readdirSync, rmSync } from 'node:fs';
+import { cpSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { z } from 'zod';
 import { Client, sleep } from './client.ts';
 import { BUSY_PHASES } from './guard.ts';
 
-const RLC_DIR = process.env.RLC_DIR ?? 'C:\\Users\\Admin\\dev\\ReimaginedLC';
+// Default: the folder the MCP client starts the server in (the ReimaginedLC checkout when working on it).
+const RLC_DIR = process.env.RLC_DIR ?? process.cwd();
 const PENGU_DIR = process.env.PENGU_DIR ?? 'C:\\Program Files\\Pengu Loader';
 const REPO = process.env.RLC_REPO ?? 'kyso1/ReimaginedLC';
 
@@ -68,6 +70,19 @@ function run(line: string, timeoutMs: number): Promise<{ code: number | null; ou
 }
 
 const tail = (s: string, n = 6000) => (s.length > n ? `…${s.slice(-n)}` : s);
+
+/** The dev-cycle tools run npm/vite in RLC_DIR: make sure it really is a ReimaginedLC checkout. */
+function assertRepo(): void {
+  let name: string | undefined;
+  try {
+    name = JSON.parse(readFileSync(join(RLC_DIR, 'package.json'), 'utf8')).name;
+  } catch {}
+  if (name !== 'reimaginedlc') {
+    throw new Error(
+      `RLC_DIR (${RLC_DIR}) is not a ReimaginedLC checkout. Clone https://github.com/kyso1/ReimaginedLC, run npm install, and point RLC_DIR at it.`,
+    );
+  }
+}
 
 async function guardPhase(action: string): Promise<string> {
   const phase = await client.phase();
@@ -198,6 +213,7 @@ tool(
   'Typechecks (tsc --noEmit) and runs the vitest suite of the ReimaginedLC repo; optional filter limits vitest to matching test files.',
   { filter: z.string().regex(/^[\w./-]+$/, 'letters, digits, . / _ - only').optional(), skipTypecheck: z.boolean().optional() },
   async (a) => {
+    assertRepo();
     const out: string[] = [];
     if (!a.skipTypecheck) {
       const t = await run('npx tsc --noEmit', 300_000);
@@ -216,6 +232,7 @@ tool(
   'Builds ReimaginedLC in dev mode (vite build --mode client), which copies it into the Pengu plugin folder and replaces the auto-update loader, then reloads the client (refused in champ select, queue or game) so the dev build with window.__rlc is live. Run rlc_restore_release when done.',
   { reload: z.boolean().optional().describe('Default true.') },
   async (a) => {
+    assertRepo();
     await guardPhase('build and reload');
     const b = await run('npx vite build --mode client', 600_000);
     if (b.code !== 0) throw new Error(`vite build failed (exit ${b.code})\n${tail(b.out)}`);

@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -6,6 +7,17 @@ import { z } from 'zod';
 import { Client, fmtNet, sleep, type Target } from './client.ts';
 import { BUSY_PHASES } from './guard.ts';
 import { goTo, loadMap, MAP_DIR, patchOf, searchMap, waitFor, type CrawlMap } from './map.ts';
+import { setupPengu } from './cdp.ts';
+
+if (process.argv.includes('--setup')) {
+  try {
+    console.log(setupPengu());
+    process.exit(0);
+  } catch (e) {
+    console.error(`Could not write the Pengu config (${(e as Error).message}). Run the terminal as administrator, or set PENGU_DIR.`);
+    process.exit(1);
+  }
+}
 
 const client = new Client();
 await client.init();

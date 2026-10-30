@@ -1,9 +1,11 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { join } from 'node:path';
 import type { Client, Target } from './client.ts';
 import { sleep } from './client.ts';
 
-export const MAP_DIR = join(import.meta.dirname, '..', 'map');
+/** Crawl output holds personal data (friends, chat, account ids): it lives in the user's home, never in the package. */
+export const MAP_DIR = process.env.LOL_CDP_MAP_DIR ?? join(homedir(), '.lol-cdp-mcp', 'map');
 
 /** One way to get somewhere: open a nav tab, click a control, press a key. */
 export interface Step {

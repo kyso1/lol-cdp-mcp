@@ -29,7 +29,7 @@ and which LCU call it fires, instead of probing the DOM.
 
 - TypeScript run directly by Node 24 type stripping (`node src/server.ts`), checked by `tsc --noEmit`. Dependencies:
   `@modelcontextprotocol/sdk`, `zod`. Node's built-in `WebSocket`, no `ws`.
-- Repo at `C:\Users\Admin\dev\lol-cdp-mcp`. The old server stays in `~/.claude.json` until the new one covers it.
+- Own repo (`lol-cdp-mcp`). The old server stays in `~/.claude.json` until the new one covers it.
 - Safety is enforced at the network layer, not by guessing button labels:
   - Crawler: every non-GET request is paused with `Fetch`, recorded (method, path, body) and failed, except a short
     allowlist the crawl needs (create/leave lobby, custom champ select, local refreshes). This also maps what a

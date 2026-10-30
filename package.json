@@ -1,16 +1,39 @@
 {
   "name": "lol-cdp-mcp",
   "version": "0.1.0",
-  "private": true,
-  "type": "module",
   "description": "MCP server that drives the League of Legends client over the Chrome DevTools Protocol",
-  "engines": {
-    "node": ">=24"
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kyso1/lol-cdp-mcp.git"
   },
+  "keywords": [
+    "mcp",
+    "league-of-legends",
+    "lcu",
+    "cdp",
+    "pengu-loader"
+  ],
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "lol-cdp-mcp": "dist/server.js",
+    "rlc-mcp": "dist/rlc-server.js",
+    "lol-cdp-crawl": "dist/crawl.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "start": "node src/server.ts",
     "start:rlc": "node src/rlc-server.ts",
     "crawl": "node src/crawl.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "prepare": "tsc -p tsconfig.build.json",
     "test": "node --test src/*.test.ts",
     "typecheck": "tsc --noEmit"
   },

@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 /**
  * Walks the native client screen by screen: hovers and clicks every control (one sample of each repeated item), records
  * tooltips, what each click opened and which LCU requests it fired, and writes map/<patch>/map.json.

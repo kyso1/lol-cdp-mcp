@@ -1,4 +1,5 @@
 node_modules/
+dist/
 *.local.*
-# Crawl output is personal (friends, chat, account data): never committed.
+# Crawl output is personal (friends, chat, account ids) and lives in ~/.lol-cdp-mcp/map.
 map/

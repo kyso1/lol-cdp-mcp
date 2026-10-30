@@ -3,35 +3,63 @@
 Two MCP servers that drive the League of Legends client over the plain Chrome DevTools Protocol. No in-client plugin
 and no bridge: Pengu Loader opens a debugging port and the servers talk to the client page directly.
 
-- **lol-cdp** (`src/server.ts`): the native client. Real mouse and keyboard input, a shadow-DOM-aware snapshot with
-  refs, screenshots in click coordinates, the LCU API, an endpoint catalog, and a crawled map of every screen.
-- **rlc** (`src/rlc-server.ts`): [ReimaginedLC](https://github.com/kyso1/ReimaginedLC). Shell state and navigation
-  through the dev build's `window.__rlc`, LCU stores, prefs, and the dev cycle (check, build into Pengu, restore the
-  release).
+- **lol-cdp**: the native client. Real mouse and keyboard input, a shadow-DOM-aware snapshot with refs, screenshots in
+  click coordinates, the LCU API, an endpoint catalog, and a crawled map of every screen.
+- **rlc**: [ReimaginedLC](https://github.com/kyso1/ReimaginedLC). Shell state and navigation through the dev build's
+  `window.__rlc`, LCU stores, prefs, and the dev cycle (check, build into Pengu, restore the release).
 
-## Setup
+## Install
 
-1. Add this line to `C:\Program Files\Pengu Loader\config` and restart the client:
+Needs Windows, [Pengu Loader](https://github.com/PenguLoader/PenguLoader) and Node.js 22 or newer.
 
-   ```
-   RemoteDebuggingPort=9222
-   ```
+**1. Open the debugging port** (once). This writes `RemoteDebuggingPort=9222` to Pengu Loader's `config` file; run the
+terminal as administrator if Pengu lives in `Program Files`. Then restart the League client.
 
-   `http://127.0.0.1:9222/json` should then list the client page.
+```
+npx -y -p github:kyso1/lol-cdp-mcp lol-cdp-mcp --setup
+```
 
-   **Security:** the port has no authentication. Any local process can drive the client through it, and the page URL
-   listed by `/json` contains the LCU credentials. It only listens on 127.0.0.1.
+**2. Add the server to your MCP client.** Claude Code:
 
-2. `npm install` (Node 24 or newer; TypeScript runs directly through Node's type stripping, there is no build step).
+```
+claude mcp add -s user lol-cdp -- npx -y -p github:kyso1/lol-cdp-mcp lol-cdp-mcp
+```
 
-3. Register the servers:
+Cursor, Claude Desktop, VS Code and others (`mcpServers` JSON):
 
-   ```
-   claude mcp add -s user lol-cdp -- node C:/path/to/lol-cdp-mcp/src/server.ts
-   claude mcp add -s user rlc -e RLC_DIR=C:/path/to/ReimaginedLC -- node C:/path/to/lol-cdp-mcp/src/rlc-server.ts
-   ```
+```json
+{
+  "mcpServers": {
+    "lol-cdp": { "command": "npx", "args": ["-y", "-p", "github:kyso1/lol-cdp-mcp", "lol-cdp-mcp"] }
+  }
+}
+```
 
-Environment: `LOL_CDP_PORT` (default: read from the Pengu config, else 9222), `PENGU_DIR`, `RLC_DIR`, `RLC_REPO`.
+**3. (ReimaginedLC developers) the rlc server.** Clone ReimaginedLC, `npm install` in it, then:
+
+```
+claude mcp add -s user rlc -e RLC_DIR=C:/path/to/ReimaginedLC -- npx -y -p github:kyso1/lol-cdp-mcp rlc-mcp
+```
+
+Without `RLC_DIR` the server uses the folder the MCP client starts it in.
+
+Check: with the client open, `http://127.0.0.1:9222/json` lists the client page, and the `state` tool answers.
+
+> **Security:** the debugging port has no authentication. Any program on your PC can drive the client through it, and
+> the page URL listed by `/json` contains the LCU credentials. It only listens on 127.0.0.1. Remove the line from the
+> Pengu `config` to close it.
+
+Environment: `LOL_CDP_PORT` (default: read from the Pengu config, else 9222), `PENGU_DIR`, `LOL_CDP_MAP_DIR` (default
+`~/.lol-cdp-mcp/map`), `RLC_DIR`, `RLC_REPO`.
+
+### From source
+
+```
+git clone https://github.com/kyso1/lol-cdp-mcp && cd lol-cdp-mcp && npm install
+claude mcp add -s user lol-cdp -- node C:/path/to/lol-cdp-mcp/src/server.ts
+```
+
+Node 24 runs the TypeScript sources directly; `npm run build` produces `dist/` for Node 22.
 
 ## lol-cdp tools
 
@@ -62,12 +90,14 @@ Guarded at the network level, by method and path, because labels change with loc
 ## The crawl map
 
 ```
-npm run crawl -- [--only=rcp-fe-lol-loot,shell] [--max-screens=150] [--max-controls=40] [--depth=3] [--no-hover]
+npx -y -p github:kyso1/lol-cdp-mcp lol-cdp-crawl [--only=rcp-fe-lol-loot,shell] [--max-screens=150] [--max-controls=40] [--depth=3] [--no-hover]
 ```
 
 Starts only in None or Lobby and stops if the phase changes. It turns the ReimaginedLC layer off and back on, then
 for each screen hovers and clicks every control (one sample of each repeated item), follows tabs, overlays and
-dropdowns, and writes `map/<patch>/map.json` (and screenshots in `map/<patch>/shots/`). The map holds personal data (friend names, chat, account ids), so `map/` is gitignored.
+dropdowns, and writes `~/.lol-cdp-mcp/map/<patch>/map.json` (plus screenshots in `shots/`). `--only` merges into the
+existing map. The map holds personal data (friend names, chat, account ids): it stays on your PC and is never part of
+this repo.
 
 While crawling, every write request outside a short allowlist (create/leave lobby, custom champ select, loot refresh)
 is recorded and failed. Purchase, craft, report, invite and settings buttons are therefore pressed, but nothing

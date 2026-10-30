@@ -1,16 +1,33 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 type Listener = (params: any) => void;
+
+const penguConfig = () => join(process.env.PENGU_DIR ?? 'C:\\Program Files\\Pengu Loader', 'config');
 
 /** Port from LOL_CDP_PORT, else `RemoteDebuggingPort=` in Pengu Loader's config file, else 9222. */
 export function cdpPort(): number {
   if (process.env.LOL_CDP_PORT) return Number(process.env.LOL_CDP_PORT);
-  const dir = process.env.PENGU_DIR ?? 'C:\\Program Files\\Pengu Loader';
   try {
-    const m = /RemoteDebuggingPort\s*=\s*(\d+)/i.exec(readFileSync(`${dir}\\config`, 'utf8'));
+    const m = /RemoteDebuggingPort\s*=\s*(\d+)/i.exec(readFileSync(penguConfig(), 'utf8'));
     if (m && m[1] !== '0') return Number(m[1]);
   } catch {}
   return 9222;
+}
+
+/** `--setup`: sets RemoteDebuggingPort in Pengu Loader's config (other keys kept). Takes effect on the next client start. */
+export function setupPengu(port = Number(process.env.LOL_CDP_PORT ?? 9222)): string {
+  const file = penguConfig();
+  let text = '';
+  try {
+    text = readFileSync(file, 'utf8');
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e;
+  }
+  const lines = text.split(/\r?\n/).filter((l) => l.trim() && !/^\s*RemoteDebuggingPort\s*=/i.test(l));
+  lines.push(`RemoteDebuggingPort=${port}`);
+  writeFileSync(file, lines.join('\n'));
+  return `Wrote RemoteDebuggingPort=${port} to ${file}. Restart the League client to open the port.`;
 }
 
 export class CdpError extends Error {}
@@ -61,9 +78,9 @@ export class Cdp {
       targets = await (await fetch(`http://127.0.0.1:${this.port}/json`, { signal: AbortSignal.timeout(3000) })).json();
     } catch {
       throw new CdpError(
-        `No CDP endpoint on 127.0.0.1:${this.port}. Is the League client running, and does ` +
-          `"C:\\Program Files\\Pengu Loader\\config" contain RemoteDebuggingPort=${this.port}? ` +
-          `(The port opens on the next client start.)`,
+        `No CDP endpoint on 127.0.0.1:${this.port}. Is the League client running with Pengu Loader, and does ` +
+          `"${penguConfig()}" contain RemoteDebuggingPort=${this.port}? Run "npx -y -p github:kyso1/lol-cdp-mcp ` +
+          `lol-cdp-mcp --setup" to add it, then restart the client.`,
       );
     }
     const page = targets.find((t) => t.type === 'page' && /\/index\.html/.test(t.url) && t.webSocketDebuggerUrl);
