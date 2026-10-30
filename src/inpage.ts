@@ -260,7 +260,7 @@ export function inpage() {
       kept.add(el);
       // Tabs are siblings with the same shape but each leads somewhere else: never collapse them.
       const tab = /navigation-item|radio-input-option|^tab$/i.test(el.tagName) || el.getAttribute('role') === 'tab' ||
-        !!el.querySelector?.('lol-uikit-navigation-item');
+        !!el.querySelector?.('lol-uikit-navigation-item') || !!el.closest('nav,[role=tablist],[role=navigation],[role=menubar]');
       const sig = tab ? `${signature(el)}#${label(el)}` : signature(el);
       const n = (groups.get(sig) ?? 0) + 1;
       groups.set(sig, n);
