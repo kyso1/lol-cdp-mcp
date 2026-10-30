@@ -74,3 +74,17 @@ Tools: `state`, `snapshot`, `query`, `click`, `hover`, `type`, `key`, `scroll`, 
 ## Left to the builder
 
 Crawl heuristics (dedupe of repeated items, depth, settle detection), map schema details, tool output formats.
+
+## ReimaginedLC server (second project)
+
+Decided with the user: a separate server; ReimaginedLC exposes a hook only in its dev build.
+
+- Same repo, second entry point (`src/rlc-server.ts`), sharing the CDP client. Claude's call: a separate repo would
+  copy the CDP layer; the dev-cycle tools find the ReimaginedLC repo through `RLC_DIR`.
+- ReimaginedLC side (branch `dev-mcp-hook`): `src/shell/devhook.ts` installs `window.__rlc` from the App render,
+  inside `if (import.meta.env.MODE === 'client')`. The release bundle was checked to contain none of it. The shell's
+  navigation state lives in `useState`, so the App hands a fresh control object on every render.
+- Tools: state, navigation (home, play, custom, phase screen, rail views), chat/profile/settings, layer, prefs (returns
+  previous values to restore), LCU stores, capability check, scoped snapshot, errors, and the dev cycle (tsc + vitest,
+  `vite build --mode client` + phase-guarded reload, restore latest release zip + reload).
+- Not crawled: ReimaginedLC's map comes from its own code, which an agent can read.
