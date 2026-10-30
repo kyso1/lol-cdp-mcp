@@ -79,6 +79,40 @@ async function closeOverlays(): Promise<void> {
   }
 }
 
+/** Side panels (honor, notifications) cover the screen without looking like a modal. */
+const CLOSERS = ['lol-uikit-close-button', '[class*="close-button"]', '[class*="close-btn"]', 'button[class*="close"]', '[class*="dismiss"]'];
+
+/** True when the top bar is covered somewhere: something (panel, backdrop) sits over the screen. */
+async function blocked(): Promise<boolean> {
+  const n = await client.page<number>('count', { selector: 'lol-uikit-navigation-item.main-navigation-menu-item' }).catch(() => 0);
+  for (let i = 0; i < n; i++) {
+    const p = await client.page<{ onTop: boolean }>('point', { selector: 'lol-uikit-navigation-item.main-navigation-menu-item', nth: i }).catch(() => null);
+    if (p && !p.onTop) return true;
+  }
+  return false;
+}
+
+async function unblock(): Promise<void> {
+  for (let i = 0; i < 3 && (await blocked()); i++) {
+    await client.key('Escape');
+    await sleep(500);
+    if (!(await blocked())) return;
+    for (const selector of CLOSERS) {
+      const n = await client.page<number>('count', { selector }).catch(() => 0);
+      let done = false;
+      for (let k = 0; k < n && !done; k++) {
+        const p = await client.page<{ onTop: boolean }>('point', { selector, nth: k }).catch(() => null);
+        if (p?.onTop) {
+          await client.click({ selector, nth: k }).catch(() => {});
+          await sleep(600);
+          done = true;
+        }
+      }
+      if (done) break;
+    }
+  }
+}
+
 async function moveAway(): Promise<void> {
   await client.mouse('mouseMoved', 2, 700);
 }
@@ -87,6 +121,7 @@ async function moveAway(): Promise<void> {
 async function reset(node: Node): Promise<boolean> {
   await moveAway();
   await closeOverlays();
+  await unblock();
   for (const step of node.path) {
     if (step.nav) await client.page('navigate', step.nav);
     if (step.click) {

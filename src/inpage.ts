@@ -15,7 +15,7 @@ export function inpage() {
   const UIKIT =
     /^(lol-uikit-(flat-button|flat-button-secondary|flat-button-group|navigation-item|radio-input-option|flat-checkbox|checkbox|dropdown|framed-dropdown|dropdown-option|flat-input|slider|close-button|toggle|framed-icon-button|icon-button|plus-button|switch|search-input|flat-text-area|tab)|lc-button|lol-social-roster-member|lol-social-panel-button)$/i;
   const ROLES = /^(button|tab|menuitem|menuitemcheckbox|menuitemradio|checkbox|radio|link|option|switch|slider|combobox|textbox|treeitem|spinbutton)$/;
-  const OVERLAY = /modal|flyout|tooltip|dialog|popup|popover|toast|context-menu|contextmenu|dropdown-options|menu-options|lol-uikit-menu/i;
+  const OVERLAY = /modal|drawer|flyout|tooltip|dialog|popup|popover|toast|context-menu|contextmenu|dropdown-options|menu-options|lol-uikit-menu/i;
   const UNSTABLE_CLASS = /^(ember|active|hover|hovered|selected|focus|focused|disabled|enabled|visible|hidden|show|open|is-|has-|ng-|animat|transition)/i;
 
   const parentDeep = (e: Element): Element | null =>
