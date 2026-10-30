@@ -9,7 +9,7 @@
  *   node src/crawl.ts [--only=rcp-fe-lol-loot,rcp-fe-lol-collections] [--max-screens=150] [--max-controls=40]
  *                     [--depth=3] [--no-hover]
  */
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Client, sleep, type Target } from './client.ts';
 import { BUSY_PHASES, CRAWL_PHASES } from './guard.ts';
@@ -178,7 +178,13 @@ async function main() {
     crawledAt: new Date().toISOString(),
     screens: [],
   };
-  const save = () => writeFileSync(join(outDir, ONLY.length ? `map.partial.json` : 'map.json'), JSON.stringify(map, null, 1));
+  // With --only, the screens crawled now replace or extend those of the existing map.
+  const file = join(outDir, 'map.json');
+  const earlier: Screen[] = ONLY.length && existsSync(file) ? (JSON.parse(readFileSync(file, 'utf8')) as CrawlMap).screens : [];
+  const save = () => {
+    const ids = new Set(map.screens.map((x) => x.id));
+    writeFileSync(file, JSON.stringify({ ...map, screens: [...earlier.filter((x) => !ids.has(x.id)), ...map.screens] }, null, 1));
+  };
 
   await client.crawlGuard(true);
   try {
@@ -236,8 +242,11 @@ async function main() {
         log(`== ${node.id} is the same screen as an earlier one (${key})`);
         continue;
       }
-      seenKeys.add(key);
-      if (!keyOwner.has(key)) keyOwner.set(key, node.id);
+      // The shell borrows the first tab's screen to reach the top bar; that screen still needs its own visit.
+      if (node.id !== 'shell') {
+        seenKeys.add(key);
+        if (!keyOwner.has(key)) keyOwner.set(key, node.id);
+      }
 
       const screen: Screen = {
         id: node.id,
