@@ -1,3 +1,4 @@
 node_modules/
-map/*/shots/
 *.local.*
+# Crawl output is personal (friends, chat, account data): never committed.
+map/
