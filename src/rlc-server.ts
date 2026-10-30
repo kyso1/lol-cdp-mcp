@@ -15,8 +15,8 @@ import { z } from 'zod';
 import { Client, sleep } from './client.ts';
 import { BUSY_PHASES } from './guard.ts';
 
-// Default: the folder the MCP client starts the server in (the ReimaginedLC checkout when working on it).
-const RLC_DIR = process.env.RLC_DIR ?? process.cwd();
+// Only an explicitly configured checkout: the dev-cycle tools run npm and vite there, so never guess a folder.
+const RLC_DIR = process.env.RLC_DIR;
 const PENGU_DIR = process.env.PENGU_DIR ?? 'C:\\Program Files\\Pengu Loader';
 const REPO = process.env.RLC_REPO ?? 'kyso1/ReimaginedLC';
 
@@ -53,7 +53,7 @@ async function rlc<T = any>(expr: string): Promise<T> {
 /** Runs a command line through the shell in the ReimaginedLC repo; arguments are fixed strings from this file. */
 function run(line: string, timeoutMs: number): Promise<{ code: number | null; out: string }> {
   return new Promise((resolve) => {
-    const p = spawn(line, { cwd: RLC_DIR, shell: true, env: { ...process.env, FORCE_COLOR: '0', CI: '1' } });
+    const p = spawn(line, { cwd: assertRepo(), shell: true, env: { ...process.env, FORCE_COLOR: '0', CI: '1' } });
     let out = '';
     const add = (d: Buffer) => {
       out += d.toString();
@@ -72,7 +72,8 @@ function run(line: string, timeoutMs: number): Promise<{ code: number | null; ou
 const tail = (s: string, n = 6000) => (s.length > n ? `…${s.slice(-n)}` : s);
 
 /** The dev-cycle tools run npm/vite in RLC_DIR: make sure it really is a ReimaginedLC checkout. */
-function assertRepo(): void {
+function assertRepo(): string {
+  if (!RLC_DIR) throw new Error('Set RLC_DIR to your ReimaginedLC checkout in the MCP server config to use the dev-cycle tools.');
   let name: string | undefined;
   try {
     name = JSON.parse(readFileSync(join(RLC_DIR, 'package.json'), 'utf8')).name;
@@ -82,6 +83,7 @@ function assertRepo(): void {
       `RLC_DIR (${RLC_DIR}) is not a ReimaginedLC checkout. Clone https://github.com/kyso1/ReimaginedLC, run npm install, and point RLC_DIR at it.`,
     );
   }
+  return RLC_DIR;
 }
 
 async function guardPhase(action: string): Promise<string> {
@@ -224,7 +226,6 @@ tool(
     out.push(`vitest: ${v.code === 0 ? 'OK' : `FAILED (exit ${v.code})`}\n${v.code === 0 ? summary : tail(v.out, 8000)}`);
     return out.join('\n\n');
   },
-  true,
 );
 
 tool(
@@ -265,4 +266,4 @@ tool(
 );
 
 await server.connect(new StdioServerTransport());
-console.error(`[rlc] ready on CDP port ${client.cdp.port}, repo ${RLC_DIR}`);
+console.error(`[rlc] ready on CDP port ${client.cdp.port}, repo ${RLC_DIR ?? '(RLC_DIR not set: dev-cycle tools off)'}`);

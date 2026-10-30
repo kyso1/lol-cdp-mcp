@@ -41,7 +41,7 @@ Cursor, Claude Desktop, VS Code and others (`mcpServers` JSON):
 claude mcp add -s user rlc -e RLC_DIR=C:/path/to/ReimaginedLC -- npx -y -p github:kyso1/lol-cdp-mcp rlc-mcp
 ```
 
-Without `RLC_DIR` the server uses the folder the MCP client starts it in.
+`RLC_DIR` is required for `rlc_check` and `rlc_build`, which run npm and vite in that folder; the other tools work without it.
 
 Check: with the client open, `http://127.0.0.1:9222/json` lists the client page, and the `state` tool answers.
 
